@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Book search-box</title>
+	<link rel="stylesheet" href="search.css">
+	<script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+    <script defer src="pagination.js"></script>
+</head>
+<body>
+	<header>
+        <h1>News SearchWeb</h1>
+    </header>
+	<div class="search-box">
+		<input id="search-txt" class="search-txt" type="text" placeholder="what are you looking for?">
+		<a id="search-btn" class="search-btn" href="#">
+		<i class="fas fa-search"></i>
+		</a>
+	</div>
+    <div class="container">
+        <div class="filter-section">
+            <div class="filter-box">
+                <h2>Fake Or Not</h2>
+                <label>
+                    <input type="checkbox" name="fakeornot" value="fake"> Fake
+                </label><br>
+                <label>
+                    <input type="checkbox" name="fakeornot" value="real"> Real
+                </label><br>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <div class="result-info">
+                <div id="result-count"></div>
+                <div id="current-page"></div>
+                <div class="pagination" style="display: none;">
+                    <a href="#" id="prev-page" aria-label="Previous Page">&lt;&lt;</a>
+                    <a href="#" id="next-page" aria-label="Next Page">&gt;&gt;</a>
+                </div>
+            </div>
+            <div id="results-container">
+                
+            </div>
+        </div>
+    </div>
+
+    <div id="popup-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="modal-title">Notice</h2>
+            <p id="modal-message">This is content</p>
+            <button id="modal-close-button">Close</button>
+        </div>
+    </div>
+
+</body>
+</html>
