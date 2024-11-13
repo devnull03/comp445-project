@@ -5,13 +5,14 @@ use std::{
     path::Path,
 };
 
-pub fn main() {
-    let file_path =
-        Path::new("/home/devnull03/school/COMP455/project/server/src/bin/evaluation.csv");
+#[allow(dead_code)]
+fn main() {
+    // let file_path =
+    //     Path::new("/home/devnull03/school/COMP455/project/server/src/bin/evaluation.csv");
 
-    let records = load_data(file_path);
+    // let records = load_data(file_path);
 
-    let mut inverse_index = build_inverted_index(&records);
+    // let mut inverse_index = build_inverted_index(&records);
 
     // for _ in 0..3 {
     //     println!("{:?}", inverse_index.next());
@@ -26,6 +27,8 @@ pub struct Record {
     text: String,
     label: u32, // can be either 1 or 0
 }
+
+pub type InverseIndexDB = HashMap<String, HashSet<u32>>;
 
 pub fn load_data(file_path: &Path) -> Vec<Record> {
     let file = File::open(file_path).expect("Failed to open file");
@@ -53,8 +56,8 @@ pub fn tokenize(text: &String) -> Vec<String> {
     tokens
 }
 
-pub fn build_inverted_index(records: &Vec<Record>) -> HashMap<String, HashSet<u32>> {
-    let mut inverted_index: HashMap<String, HashSet<u32>> = HashMap::new();
+pub fn build_inverted_index(records: &Vec<Record>) -> InverseIndexDB {
+    let mut inverted_index: InverseIndexDB  = HashMap::new();
 
     for record in records {
         let combined_string = vec![record.text.as_str(), record.title.as_str()].join(" ");

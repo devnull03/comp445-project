@@ -1,5 +1,5 @@
+pub mod bin;
 pub mod search;
-// pub mod bin;
 
 use axum::{
     error_handling::HandleErrorLayer,
@@ -8,16 +8,16 @@ use axum::{
     response::IntoResponse,
     routing, Json, Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
     time::Duration,
 };
 use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use uuid::Uuid;
+// use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
@@ -30,7 +30,7 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let db = Db::default();
+    let data = Data::default();
 
     // Compose the routes
     let app = Router::new()
@@ -52,7 +52,7 @@ async fn main() {
                 .layer(TraceLayer::new_for_http())
                 .into_inner(),
         )
-        .with_state(db);
+        .with_state(data);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
@@ -69,13 +69,12 @@ pub struct Search {
     pub limit: Option<usize>,
 }
 
-async fn lookup(search: Option<Query<Search>>, State(db): State<Db>) -> impl IntoResponse {
+async fn lookup(search: Option<Query<Search>>, State(db): State<Data>) -> impl IntoResponse {
     // TODO: impliment search
     let Query(search) = search.unwrap_or_default();
 
     // search.search_text;
     let search_results = db.read().unwrap();
-    search::find_similar_doc();
 
     let search_results = search_results
         .values()
@@ -87,12 +86,12 @@ async fn lookup(search: Option<Query<Search>>, State(db): State<Db>) -> impl Int
     Json(search_results)
 }
 
-type Db = Arc<RwLock<HashMap<Uuid, Item>>>;
+type Data = Arc<RwLock<HashMap<String, HashSet<u32>>>>;
 
-#[derive(Debug, Serialize, Clone)]
-struct Item {
-    id: Uuid,
-    title: String,
-    text: String,
-    truth: bool,
-}
+// #[derive(Debug, Serialize, Clone)]
+// struct Item {
+//     id: Uuid,
+//     title: String,
+//     text: String,
+//     truth: bool,
+// }
