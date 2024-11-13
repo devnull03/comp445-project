@@ -17,6 +17,17 @@ fn main() {
     // for _ in 0..3 {
     //     println!("{:?}", inverse_index.next());
     // }
+
+    println!(
+        "{:?}",
+        create_shingles(&vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "b".to_string(),
+            "d".to_string()
+        ])
+    )
 }
 
 #[allow(dead_code)]
@@ -57,7 +68,7 @@ pub fn tokenize(text: &String) -> Vec<String> {
 }
 
 pub fn build_inverted_index(records: &Vec<Record>) -> InverseIndexDB {
-    let mut inverted_index: InverseIndexDB  = HashMap::new();
+    let mut inverted_index: InverseIndexDB = HashMap::new();
 
     for record in records {
         let combined_string = vec![record.text.as_str(), record.title.as_str()].join(" ");
@@ -74,4 +85,20 @@ pub fn build_inverted_index(records: &Vec<Record>) -> InverseIndexDB {
     }
 
     inverted_index
+}
+
+pub fn create_shingles(tokens: &Vec<String>) -> Vec<String> {
+    let shingle_size = 3;
+    let mut shingles: Vec<String> = Vec::new();
+
+    for i in 0..(tokens.len() + 1 - shingle_size) {
+        shingles.push(
+            tokens
+                .get(i..(i + shingle_size))
+                .expect("list index exceded allowed shingle size")
+                .join(" "),
+        );
+    }
+
+    shingles
 }
