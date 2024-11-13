@@ -1,4 +1,5 @@
 pub mod search;
+// pub mod bin;
 
 use axum::{
     error_handling::HandleErrorLayer,
