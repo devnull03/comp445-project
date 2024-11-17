@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::{collections::{HashMap, HashSet}, path::Path};
 
-use crate::bin::processing::{build_inverted_index, load_data, InverseIndexDB, Record};
+use crate::bin::processing::{self, build_inverted_index, load_data, InverseIndexDB, Record};
 
-pub fn build_db(file_path: String) -> (Vec<Record>, InverseIndexDB) {
+pub fn build_db(file_path: String) -> (HashMap<u32, Record>, InverseIndexDB) {
     let file_path = Path::new(&file_path);
 
     let records = load_data(file_path);
@@ -10,4 +10,22 @@ pub fn build_db(file_path: String) -> (Vec<Record>, InverseIndexDB) {
     let inverted_index = build_inverted_index(&records);
 
     (records, inverted_index)
+}
+
+pub fn search_db(query: &String, inverted_index: &InverseIndexDB) -> HashSet<u32> {
+    let tokens = processing::tokenize(query);
+
+    let mut last_set: HashSet<u32> = HashSet::new();
+
+    for token in &tokens {
+        let e = inverted_index.get(token).unwrap();
+
+        if last_set.is_empty() {
+            last_set = e.clone();
+        } else {
+            last_set = e.intersection(&last_set).cloned().collect();
+        }
+    }
+
+    last_set
 }

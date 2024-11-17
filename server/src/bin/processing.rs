@@ -1,4 +1,7 @@
+// use uint::{U128, U256};
 use csv;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -18,20 +21,28 @@ fn main() {
     //     println!("{:?}", inverse_index.next());
     // }
 
-    println!(
-        "{:?}",
-        create_shingles(&vec![
-            "a".to_string(),
-            "b".to_string(),
-            "c".to_string(),
-            "b".to_string(),
-            "d".to_string()
-        ])
-    )
+    let shingles = create_shingles(&vec![
+        "alakjfklajF".to_string(),
+        "Alakjfklajf".to_string(),
+        "alAkjfklajf".to_string(),
+        "alakjfklbjf".to_string(),
+        "alakjfklajf".to_string(),
+        "alakfklajf".to_string(),
+    ]);
+
+    for item in shingles.iter().map(hash) {
+        println!("{:?}", &item)
+    }
 }
 
+const SHINGLE_SIZE: u32 = 3;
+// const HASH_BASE: u32 = 7;
+// const HASH_A: u32 = 173;
+// const HASH_B: u32 = 137;
+// const HASH_LARGE_PRIME: u32 = 95633;
+
 #[allow(dead_code)]
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Hash)]
 pub struct Record {
     id: u32,
     title: String,
@@ -41,17 +52,15 @@ pub struct Record {
 
 pub type InverseIndexDB = HashMap<String, HashSet<u32>>;
 
-pub fn load_data(file_path: &Path) -> Vec<Record> {
+pub fn load_data(file_path: &Path) -> HashMap<u32, Record> {
     let file = File::open(file_path).expect("Failed to open file");
 
     let mut csv_reader = csv::ReaderBuilder::new().delimiter(b';').from_reader(file);
 
-    let mut final_data: Vec<Record> = Vec::new();
+    let mut final_data: HashMap<u32, Record> = HashMap::new();
     for result in csv_reader.deserialize() {
         let record: Record = result.expect("Record didn't map correctly");
-
-        // println!("{:?}", &record);
-        final_data.push(record);
+        final_data.insert(record.id, record);
     }
     final_data
 }
@@ -67,10 +76,11 @@ pub fn tokenize(text: &String) -> Vec<String> {
     tokens
 }
 
-pub fn build_inverted_index(records: &Vec<Record>) -> InverseIndexDB {
+pub fn build_inverted_index(records: &HashMap<u32, Record>) -> InverseIndexDB {
     let mut inverted_index: InverseIndexDB = HashMap::new();
 
     for record in records {
+        let record = record.1;
         let combined_string = vec![record.text.as_str(), record.title.as_str()].join(" ");
         let tokenized_text = tokenize(&combined_string);
 
@@ -87,18 +97,33 @@ pub fn build_inverted_index(records: &Vec<Record>) -> InverseIndexDB {
     inverted_index
 }
 
-pub fn create_shingles(tokens: &Vec<String>) -> Vec<String> {
-    let shingle_size = 3;
-    let mut shingles: Vec<String> = Vec::new();
+pub fn create_shingles(tokens: &Vec<String>) -> HashSet<String> {
+    let mut shingles = HashSet::new();
 
-    for i in 0..(tokens.len() + 1 - shingle_size) {
-        shingles.push(
+    for i in 0..(tokens.len() + 1 - SHINGLE_SIZE as usize) {
+        shingles.insert(
             tokens
-                .get(i..(i + shingle_size))
+                .get(i..(i + SHINGLE_SIZE as usize))
                 .expect("list index exceded allowed shingle size")
                 .join(" "),
         );
     }
 
     shingles
+}
+
+pub fn hash(token: &String) -> u64 {
+    // was overflowing
+    // let byte_rep: u32 = token
+    //     .as_bytes()
+    //     .iter()
+    //     .enumerate()
+    //     .map(|(i, &x)| (x as u32) * (HASH_BASE.pow(i as u32)))
+    //     .sum();
+
+    // ((HASH_A * byte_rep + HASH_B) % HASH_LARGE_PRIME) as u64
+
+    let mut hasher = DefaultHasher::new();
+    token.hash(&mut hasher);
+    hasher.finish()
 }
