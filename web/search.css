@@ -204,3 +204,14 @@ header {
 #modal-close-button:hover {
     background-color: #7968a0;
 }
+
+.similar-docs {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    font-size: 0.9em;
+    text-align: center;
+}
+.similar-docs div {
+    margin-top: 5px;
+}

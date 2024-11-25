@@ -141,33 +141,65 @@ function displayInitialNews() {
     pagination.style.display = totalResults > 0 ? "block" : "none"; 
 }
 
-function applyFilters() {
-    const fakeCheckbox = document.querySelector('input[value="fake"]').checked;
-    const realCheckbox = document.querySelector('input[value="real"]').checked;
 
-    if (results.length === 0) {
-        document.getElementById("result-count").textContent = "Total Result: 0";
-        document.getElementById("results-container").innerHTML = "<div></div>";
-        return;
+const fakeCheckbox = document.querySelector('input[value="fake"]');
+const realCheckbox = document.querySelector('input[value="real"]');
+
+fakeCheckbox.addEventListener("click", function() {
+    if (fakeCheckbox.checked) {
+     
+        realCheckbox.disabled = true;
+
+    } else {
+      
+        realCheckbox.disabled = false;
+
     }
+    
+    applyFilters(); 
+});
+
+realCheckbox.addEventListener("click", function() {
+    if (realCheckbox.checked) {
+
+        fakeCheckbox.disabled = true;
+
+    } else {
+
+        fakeCheckbox.disabled = false;
+
+    }
+    
+    applyFilters(); 
+});
+
+function applyFilters() {
 
     const filteredResults = results.filter(article => {
-        if (fakeCheckbox && article.fakeOrNot === true) return true;
-        if (realCheckbox && article.fakeOrNot === false) return true;
+        if (fakeCheckbox.checked && article.fakeOrNot === true) return true;
+        if (realCheckbox.checked && article.fakeOrNot === false) return true;
         return false;
     });
 
-    if (!fakeCheckbox && !realCheckbox) {
-        results = initialNews;
+    if (!fakeCheckbox.checked && !realCheckbox.checked) {
+        results = initialNews; 
     } else {
-        results = filteredResults;
+        results = filteredResults; 
     }
 
     currentPage = 1; 
     const totalResults = results.length;
-    document.getElementById("result-count").textContent = `Total Result: ${totalResults}`;
-    displayPage(currentPage);
-    togglePagination(totalResults);
+    document.getElementById("result-count").textContent = `Total Results: ${totalResults}`;
+    displayPage(currentPage); 
+    togglePagination(totalResults); 
+}
+
+function findSimilarDocuments(selectedResult) {
+    const similarityThreshold = 0.3; 
+    return results.filter(result => {
+        if (result.id === selectedResult.id) return false; 
+        return result.articleText.includes(selectedResult.title);
+    });
 }
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -180,15 +212,30 @@ const modalCloseButton = document.getElementById("modal-close-button");
 
 function showModal(result) {
     const modalTitle= document.getElementById("modal-title");
+
     modalTitle.innerHTML = `
         <strong>Title:</strong> ${result.title}<br>
     `;
     const modalMessage = document.getElementById("modal-message");
     modalMessage.innerHTML = `
-        <strong></strong> ${result.articleText}<br>
-        <strong>Fake or Not:</strong> ${result.fakeOrNot ? "Fake" : "Not Fake"}<br>
+        <strong></strong> ${result.articleText}<br><br>
+        <strong>Fake or Not:</strong> ${result.fakeOrNot ? "Fake" : "Not Fake"}<br><br>
         <strong>Similarity Score:</strong> ${result.similarityScore}
     `;
+    modalMessage.style.textAlign = "left";
+    const similarDocs = findSimilarDocuments(result);
+    const similarDocsContainer = document.createElement("div");
+    similarDocsContainer.className = "similar-docs";
+    similarDocsContainer.style.textAlign = "left"; 
+    similarDocsContainer.innerHTML = `
+        <strong>Similar Document:</strong>
+        ${similarDocs.length > 0 ? 
+            similarDocs.map(doc => `<div>- ${doc.title}</div>`).join("") : 
+            "<div>Can't find  similar documents.</div>"
+        }
+    `;
+    
+    modalMessage.appendChild(similarDocsContainer);
     modal.style.display = "flex";
 }
 
