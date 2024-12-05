@@ -8,7 +8,10 @@ use axum::{
     response::IntoResponse,
     routing, Json, Router,
 };
+use bin::processing::Record;
+use search::{build_db, search_db};
 use serde::Deserialize;
+use uuid::Uuid;
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
@@ -30,11 +33,17 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let data = Data::default();
+    let data: Arc<
+        RwLock<(
+            HashMap<u32, bin::processing::Record>,
+            HashMap<String, HashSet<u32>>,
+        )>,
+    > = Arc::new(RwLock::new(build_db("".to_string())));
 
     // Compose the routes
     let app = Router::new()
         .route("/search", routing::get(lookup))
+        // .route("/search-results", routing::get())
         // Add middleware to all routes
         .layer(
             ServiceBuilder::new()
@@ -65,28 +74,35 @@ async fn main() {
 #[derive(Debug, Deserialize, Default)]
 pub struct Search {
     pub search_text: Option<String>,
-    pub offset: Option<usize>,
-    pub limit: Option<usize>,
+}
+
+pub struct SearchResults {
+    pub query_id: Uuid,
+    pub data: Vec<Record>,
+    
 }
 
 async fn lookup(search: Option<Query<Search>>, State(db): State<Data>) -> impl IntoResponse {
-    // TODO: impliment search
     let Query(search) = search.unwrap_or_default();
+    let db = db.read().unwrap();
 
     // search.search_text;
-    let search_results = db.read().unwrap();
+    let search_results =
+        search_db(&search.search_text.unwrap_or("".to_string()), &db.1, &db.0).clone();
 
-    let search_results = search_results
-        .values()
-        .skip(search.offset.unwrap_or(0))
-        .take(search.limit.unwrap_or(usize::MAX))
+    let search_results = search_results.into_iter()
         .cloned()
         .collect::<Vec<_>>();
 
     Json(search_results)
 }
 
-type Data = Arc<RwLock<HashMap<String, HashSet<u32>>>>;
+type Data = Arc<
+    RwLock<(
+        HashMap<u32, bin::processing::Record>,
+        HashMap<String, HashSet<u32>>,
+    )>,
+>;
 
 // #[derive(Debug, Serialize, Clone)]
 // struct Item {

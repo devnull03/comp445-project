@@ -1,7 +1,10 @@
 // use uint::{U128, U256};
 use csv;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use rand::Rng;
+use std::cmp::min;
+use std::fmt;
+use std::hash::Hash;
+use std::u64;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -10,10 +13,16 @@ use std::{
 
 #[allow(dead_code)]
 fn main() {
-    // let file_path =
-    //     Path::new("/home/devnull03/school/COMP455/project/server/src/bin/evaluation.csv");
+    let file_path =
+        Path::new("/home/devnull03/school/COMP455/project/server/src/bin/evaluation.csv");
+    let records = load_data(file_path);
 
-    // let records = load_data(file_path);
+    let combined_strings: Vec<String> = records
+        .values()
+        .map(|record| format!("{} {}", record.title, record.text))
+        .collect();
+
+    println!("{:?}", &combined_strings[0]);
 
     // let mut inverse_index = build_inverted_index(&records);
 
@@ -21,28 +30,99 @@ fn main() {
     //     println!("{:?}", inverse_index.next());
     // }
 
-    let shingles = create_shingles(&vec![
-        "alakjfklajF".to_string(),
-        "Alakjfklajf".to_string(),
-        "alAkjfklajf".to_string(),
-        "alakjfklbjf".to_string(),
-        "alakjfklajf".to_string(),
-        "alakfklajf".to_string(),
-    ]);
+    let shingle_size = 3;
 
-    for item in shingles.iter().map(hash) {
-        println!("{:?}", &item)
+    // let test_documents = vec![
+    //     "This is document 1 about cats and dogs.".to_string(),
+    //     "Document 2 talks about dogs and their behavior.".to_string(),
+    //     "The third document is about cats and their habits.".to_string(),
+    //     "Document number 4 discusses different dog breeds.".to_string(),
+    //     "Document 5 covers cat breeds and their characteristics.".to_string(),
+    //     "Document 6 is all about training your dog.".to_string(),
+    //     "In document 7, we explore the world of cat care.".to_string(),
+    //     "Document 8 delves into the history of domesticated dogs.".to_string(),
+    //     "The ninth document discusses feline health issues.".to_string(),
+    //     "The last document, number 10, is about dog nutrition and diet.".to_string(),
+    //     "Document 11 covers the topic of cat allergies.".to_string(),
+    //     "In document 12, we talk about dog sports and activities.".to_string(),
+    //     "The 13th document is about the history and origins of cats.".to_string(),
+    //     "Document 14 discusses famous cats in pop culture.".to_string(),
+    //     "Document 15 is all about dog training techniques.".to_string(),
+    // ];
+
+    println!("Creating shingles..");
+    let shingled_dataset = create_shingles(&combined_strings, shingle_size);
+
+    println!("Generating Hash functions..");
+    let hash_funcs = generate_hash_funcs(20);
+
+    // for doc in &shingled_dataset{
+    //     let signature = generate_minhash_signature(doc.1, &hash_funcs);
+    //     println!("{:?}", signature);
+    // }
+
+    // Part 2: Jaccard Similarities
+    let similarity_threshold = 0.5;
+    let mut similarities: HashMap<u32, HashMap<u32, f64>> = HashMap::new();
+
+    let similarities_file_path =
+        "/home/devnull03/school/COMP455/project/server/src/bin/similarities.csv";
+    let similarities_file = File::create(similarities_file_path).expect("Failed to create file");
+    let mut writer = csv::Writer::from_writer(similarities_file);
+
+    writer
+        .write_record(&["Document 1", "Similarities"])
+        .expect("Failed to write header");
+
+    let mut minhash_data: HashMap<u32, Vec<u64>> = HashMap::new();
+
+    println!("Generating minhashes and compairing...");
+    for (doc1_id, doc1) in &shingled_dataset {
+
+        let doc1_minhash;
+        if let Some(_doc1_minhash) = minhash_data.get(doc1_id).cloned() {
+            doc1_minhash = _doc1_minhash;
+        } else {
+            doc1_minhash = generate_minhash_signature(doc1, &hash_funcs);
+            minhash_data.insert(*doc1_id, doc1_minhash.clone());
+        }
+
+        let mut doc_similarities: HashMap<u32, f64> = HashMap::new();
+
+        println!("processing {:?}", doc1_id);
+
+        for (doc2_id, doc2) in &shingled_dataset {
+            let doc2_minhash;
+            if let Some(_doc2_minhash) = minhash_data.get(doc2_id).cloned() {
+                doc2_minhash = _doc2_minhash;
+            } else {
+                doc2_minhash = generate_minhash_signature(doc2, &hash_funcs);
+                minhash_data.insert(*doc2_id, doc2_minhash.clone());
+            }
+
+            // let e = jaccard(doc1, doc2);
+            let e = minhash_similarity(&doc1_minhash, &doc2_minhash); // gives better similarity ratings?
+
+            if e >= similarity_threshold {
+                doc_similarities.insert(*doc2_id, e);
+            }
+        }
+
+        similarities.insert(*doc1_id, doc_similarities);
+        writer
+            .write_record(&[
+                doc1_id.to_string(),
+                fmt::format(format_args!("{:?}", similarities.get(doc1_id).unwrap())),
+            ])
+            .expect("Failed to write record");
+        // println!("{:?}", similarities.get(doc1_id).unwrap());
     }
+
+    writer.flush().expect("Failed to flush writer");
+    println!("Finished calculating similarities");
 }
 
-const SHINGLE_SIZE: u32 = 3;
-// const HASH_BASE: u32 = 7;
-// const HASH_A: u32 = 173;
-// const HASH_B: u32 = 137;
-// const HASH_LARGE_PRIME: u32 = 95633;
-
-#[allow(dead_code)]
-#[derive(Debug, serde::Deserialize, Hash)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Hash, Clone)]
 pub struct Record {
     id: u32,
     title: String,
@@ -97,33 +177,73 @@ pub fn build_inverted_index(records: &HashMap<u32, Record>) -> InverseIndexDB {
     inverted_index
 }
 
-pub fn create_shingles(tokens: &Vec<String>) -> HashSet<String> {
-    let mut shingles = HashSet::new();
+pub fn create_shingles(documents: &Vec<String>, k: usize) -> HashMap<u32, HashSet<String>> {
+    let mut shingled_dataset: HashMap<u32, HashSet<String>> = HashMap::new();
 
-    for i in 0..(tokens.len() + 1 - SHINGLE_SIZE as usize) {
-        shingles.insert(
-            tokens
-                .get(i..(i + SHINGLE_SIZE as usize))
-                .expect("list index exceded allowed shingle size")
-                .join(" "),
-        );
+    for document_id in 0..documents.len() {
+        let document = documents.get(document_id).unwrap();
+        let mut document_shingles: HashSet<String> = HashSet::new();
+
+        for i in 0..(document.len() - k + 1) {
+            // println!("{:?}, {:?}, {:?}", document_id, document.len(), i..(i + k));
+
+            if let Some(shingle) = document.get(i..(i + k)) {
+                document_shingles.insert(shingle.to_string());
+            }
+        }
+
+        shingled_dataset.insert(document_id as u32, document_shingles);
     }
 
-    shingles
+    shingled_dataset
 }
 
-pub fn hash(token: &String) -> u64 {
-    // was overflowing
-    // let byte_rep: u32 = token
-    //     .as_bytes()
-    //     .iter()
-    //     .enumerate()
-    //     .map(|(i, &x)| (x as u32) * (HASH_BASE.pow(i as u32)))
-    //     .sum();
+fn create_hash_func() -> Box<dyn Fn(&str) -> u64> {
+    // Generate random coefficients `a` and `b`
+    let mut rng = rand::thread_rng();
+    let a: u64 = rng.gen_range(10..10_000);
+    let b: u64 = rng.gen_range(10..10_000);
+    let large_prime: u64 = 95_633;
 
-    // ((HASH_A * byte_rep + HASH_B) % HASH_LARGE_PRIME) as u64
+    // Return a closure that acts as the hash function
+    Box::new(move |s: &str| {
+        let sum: u64 = s.chars().map(|c| c as u64).sum();
+        (a * sum + b) % large_prime
+    })
+}
 
-    let mut hasher = DefaultHasher::new();
-    token.hash(&mut hasher);
-    hasher.finish()
+fn generate_hash_funcs(k: usize) -> Vec<Box<dyn Fn(&str) -> u64>> {
+    // Generate `k` hash functions
+    (0..k).map(|_| create_hash_func()).collect()
+}
+
+fn generate_minhash_signature(
+    data: &HashSet<String>,
+    hash_funcs: &Vec<Box<dyn Fn(&str) -> u64>>,
+) -> Vec<u64> {
+    let mut minhash_signature: Vec<u64> = Vec::new();
+
+    for hash_func in hash_funcs {
+        let mut min_value = u64::MAX;
+        for shingle in data {
+            let hash_value = hash_func(&shingle);
+            min_value = min(min_value, hash_value);
+        }
+        minhash_signature.push(min_value);
+    }
+
+    minhash_signature
+}
+
+/// Calculate the Jaccard similarity between two sets.
+pub fn jaccard(a: &HashSet<String>, b: &HashSet<String>) -> f64 {
+    let intersection: HashSet<_> = a.intersection(b).collect();
+    let union: HashSet<_> = a.union(b).collect();
+    intersection.len() as f64 / union.len() as f64
+}
+
+/// Calculate the similarity between two MinHash signatures.
+pub fn minhash_similarity(a: &Vec<u64>, b: &Vec<u64>) -> f64 {
+    let matches = a.iter().zip(b).filter(|&(x, y)| x == y).count();
+    matches as f64 / a.len() as f64
 }
