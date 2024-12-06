@@ -1,10 +1,8 @@
-// use uint::{U128, U256};
 use csv;
 use rand::Rng;
 use std::cmp::min;
 use std::fmt;
 use std::hash::Hash;
-use std::u64;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
@@ -13,68 +11,48 @@ use std::{
 
 #[allow(dead_code)]
 fn main() {
+    let shingle_size = 3;
+    let minhash_length = 20;
+    let similarity_threshold = 0.8;
     let file_path =
         Path::new("/home/devnull03/school/COMP455/project/server/src/bin/evaluation.csv");
-    let records = load_data(file_path);
 
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // loading the data
+
+    let records = load_data(file_path);
     let combined_strings: Vec<String> = records
         .values()
         .map(|record| format!("{} {}", record.title, record.text))
         .collect();
-
-    println!("{:?}", &combined_strings[0]);
-
     // let mut inverse_index = build_inverted_index(&records);
 
-    // for _ in 0..3 {
-    //     println!("{:?}", inverse_index.next());
-    // }
-
-    let shingle_size = 3;
-
-    // let test_documents = vec![
-    //     "This is document 1 about cats and dogs.".to_string(),
-    //     "Document 2 talks about dogs and their behavior.".to_string(),
-    //     "The third document is about cats and their habits.".to_string(),
-    //     "Document number 4 discusses different dog breeds.".to_string(),
-    //     "Document 5 covers cat breeds and their characteristics.".to_string(),
-    //     "Document 6 is all about training your dog.".to_string(),
-    //     "In document 7, we explore the world of cat care.".to_string(),
-    //     "Document 8 delves into the history of domesticated dogs.".to_string(),
-    //     "The ninth document discusses feline health issues.".to_string(),
-    //     "The last document, number 10, is about dog nutrition and diet.".to_string(),
-    //     "Document 11 covers the topic of cat allergies.".to_string(),
-    //     "In document 12, we talk about dog sports and activities.".to_string(),
-    //     "The 13th document is about the history and origins of cats.".to_string(),
-    //     "Document 14 discusses famous cats in pop culture.".to_string(),
-    //     "Document 15 is all about dog training techniques.".to_string(),
-    // ];
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // prepairing the data
 
     println!("Creating shingles..");
     let shingled_dataset = create_shingles(&combined_strings, shingle_size);
 
     println!("Generating Hash functions..");
-    let hash_funcs = generate_hash_funcs(20);
+    let hash_funcs = generate_hash_funcs(minhash_length);
 
-    // for doc in &shingled_dataset{
-    //     let signature = generate_minhash_signature(doc.1, &hash_funcs);
-    //     println!("{:?}", signature);
-    // }
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // creating stuff needed to store the processed data
 
-    // Part 2: Jaccard Similarities
-    let similarity_threshold = 0.5;
     let mut similarities: HashMap<u32, HashMap<u32, f64>> = HashMap::new();
 
     let similarities_file_path =
         "/home/devnull03/school/COMP455/project/server/src/bin/similarities.csv";
     let similarities_file = File::create(similarities_file_path).expect("Failed to create file");
     let mut writer = csv::Writer::from_writer(similarities_file);
-
     writer
         .write_record(&["Document 1", "Similarities"])
         .expect("Failed to write header");
-
+    
     let mut minhash_data: HashMap<u32, Vec<u64>> = HashMap::new();
+    
+    // ------------------------------------------------------------------------------------------------------------------------------------------
+    // actually processing the data
 
     println!("Generating minhashes and compairing...");
     for (doc1_id, doc1) in &shingled_dataset {
@@ -115,11 +93,12 @@ fn main() {
                 fmt::format(format_args!("{:?}", similarities.get(doc1_id).unwrap())),
             ])
             .expect("Failed to write record");
-        // println!("{:?}", similarities.get(doc1_id).unwrap());
     }
 
     writer.flush().expect("Failed to flush writer");
     println!("Finished calculating similarities");
+
+    // ------------------------------------------------------------------------------------------------------------------------------------------
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Hash, Clone)]
