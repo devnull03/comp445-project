@@ -5,12 +5,44 @@ use serde_json::json;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
-    fmt,
-    fmt::Write,
+    fmt::{self, Write},
     fs::File,
     hash::Hash,
-    path::Path,
+    path::Path
 };
+
+#[derive(Debug, serde::Deserialize, serde::Serialize, Hash, Clone)]
+pub struct Record {
+    pub id: u32,
+    pub title: String,
+    pub text: String,
+    pub label: u32, // can be either 1 or 0
+}
+
+impl Record {
+    pub fn to_db_string(&self) -> String {
+        format!(
+            r#"({}, "{}", "{}", "{}")"#,
+            self.id,
+            self.title.replace(r#"""#, "”"),
+            self.text.replace(r#"""#, "”"),
+            self.label
+        )
+    }
+}
+
+impl<'a> From<tokio_rusqlite::Row<'a>> for Record {
+    fn from(value: tokio_rusqlite::Row<'a>) -> Self {
+        Record {
+            id: value.get(0).unwrap(),
+            title: value.get(1).unwrap(),
+            text: value.get(2).unwrap(),
+            label: value.get::<_, u32>(3).unwrap(),
+        }
+    }
+}
+
+pub type InverseIndexDB = HashMap<String, HashSet<u32>>;
 
 #[allow(dead_code)]
 fn main() {
@@ -262,28 +294,6 @@ pub fn create_csv_file(
 
     writer.flush().expect("Failed to flush writer");
 }
-
-#[derive(Debug, serde::Deserialize, serde::Serialize, Hash, Clone)]
-pub struct Record {
-    pub id: u32,
-    pub title: String,
-    pub text: String,
-    pub label: u32, // can be either 1 or 0
-}
-
-impl Record {
-    fn to_db_string(&self) -> String {
-        format!(
-            r#"({}, "{}", "{}", "{}")"#,
-            self.id,
-            self.title.replace(r#"""#, "”"),
-            self.text.replace(r#"""#, "”"),
-            self.label
-        )
-    }
-}
-
-pub type InverseIndexDB = HashMap<String, HashSet<u32>>;
 
 pub fn load_data(file_path: &Path) -> HashMap<u32, Record> {
     let file = File::open(file_path).expect("Failed to open file");
