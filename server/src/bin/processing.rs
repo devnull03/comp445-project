@@ -8,7 +8,7 @@ use std::{
     fmt::{self, Write},
     fs::File,
     hash::Hash,
-    path::Path
+    path::Path,
 };
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Hash, Clone)]
@@ -31,13 +31,13 @@ impl Record {
     }
 }
 
-impl<'a> From<tokio_rusqlite::Row<'a>> for Record {
-    fn from(value: tokio_rusqlite::Row<'a>) -> Self {
+impl<'a> From<&tokio_rusqlite::Row<'a>> for Record {
+    fn from(value: &tokio_rusqlite::Row<'a>) -> Self {
         Record {
             id: value.get(0).unwrap(),
             title: value.get(1).unwrap(),
             text: value.get(2).unwrap(),
-            label: value.get::<_, u32>(3).unwrap(),
+            label: value.get::<_, String>(3).unwrap().parse().unwrap(),
         }
     }
 }

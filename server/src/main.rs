@@ -6,20 +6,28 @@ pub mod schema;
 use axum::{error_handling::HandleErrorLayer, http::StatusCode, routing, Router};
 use dotenv::dotenv;
 use handler::search_handler;
+use model::RecordResponse;
 use tokio_rusqlite;
 use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use uuid::Uuid;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 pub struct AppState {
     db: tokio_rusqlite::Connection,
-    cached_queries: HashMap<Uuid, QueryState>,
+    cached_queries: Mutex<HashMap<Uuid, QueryState>>,
 }
 
-pub struct QueryState {}
+pub struct QueryState {
+    text_query: String,
+    data: Vec<RecordResponse>,
+}
 
 #[tokio::main]
 async fn main() {
@@ -45,7 +53,7 @@ async fn main() {
         .route("/search", routing::get(search_handler))
         .with_state(Arc::new(AppState {
             db: conn.clone(),
-            cached_queries: HashMap::new(),
+            cached_queries: Mutex::new(HashMap::new()),
         }))
         .layer(
             ServiceBuilder::new()
