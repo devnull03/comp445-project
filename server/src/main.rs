@@ -5,7 +5,7 @@ pub mod schema;
 
 use axum::{error_handling::HandleErrorLayer, http::StatusCode, routing, Router};
 use dotenv::dotenv;
-use handler::search_handler;
+use handler::{search_handler, search_pagination_handler};
 use model::RecordResponse;
 use tokio_rusqlite;
 use tower::{BoxError, ServiceBuilder};
@@ -51,6 +51,7 @@ async fn main() {
     let app = Router::new()
         .route("/test", routing::get(|| async { "this is a test" }))
         .route("/search", routing::get(search_handler))
+        .route("/search-results", routing::get(search_pagination_handler))
         .with_state(Arc::new(AppState {
             db: conn.clone(),
             cached_queries: Mutex::new(HashMap::new()),

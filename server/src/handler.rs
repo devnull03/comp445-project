@@ -1,11 +1,13 @@
 use axum::{
     extract::{Query, State},
-    // http::StatusCode,
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use rusqlite::params;
+use serde_json::json;
 use std::{
+    any::Any,
     collections::{HashMap, HashSet},
     sync::Arc,
 };
@@ -14,11 +16,11 @@ use uuid::Uuid;
 use crate::{
     bin::processing::Record,
     model::{RecordResponse, SearchResultsRes, SimilarInfo, SimilarityInfoFull},
-    schema::SearchReq,
+    schema::{SearchReq, SearchResultsReq},
     AppState, QueryState,
 };
 
-const QUERY_LIMIT: i32 = 10;
+const QUERY_LIMIT: u32 = 10;
 
 pub async fn search_handler(
     query: Query<SearchReq>,
@@ -147,6 +149,11 @@ pub async fn search_handler(
             data: search_entries.clone(),
         },
     );
+    tracing::info!(
+        "Cashed Query: {}, with id: {}",
+        &new_search_id,
+        query.search_text.clone().unwrap()
+    );
 
     Json(SearchResultsRes {
         search_id: new_search_id,
@@ -155,4 +162,39 @@ pub async fn search_handler(
         page: 1,
         total_pages: search_entries.len().div_ceil(QUERY_LIMIT as usize) as u32,
     })
+}
+
+pub async fn search_pagination_handler(
+    query: Query<SearchResultsReq>,
+    State(data): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let cached_queries = &data.cached_queries.lock().unwrap();
+
+    if !cached_queries.contains_key(&query.query_id) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"message": "Invalid query id provided or query expired"})),
+        ));
+    }
+
+    let data = &cached_queries.get(&query.query_id).unwrap().data;
+    let total_pages = data.len().div_ceil(QUERY_LIMIT as usize) as u32;
+
+    if query.page <= 0 || query.page > total_pages {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"message": "Invalid page number provided"})),
+        ));
+    }
+
+    let start = ((query.page - 1) * QUERY_LIMIT) as usize;
+    let end = (((query.page - 1) * QUERY_LIMIT + QUERY_LIMIT) as usize).min(data.len());
+
+    Ok(Json(SearchResultsRes {
+        search_id: query.query_id,
+        data: data.get(start..end).unwrap().to_vec(),
+        number_of_results: data.len() as u32,
+        page: query.page,
+        total_pages: total_pages,
+    }))
 }
