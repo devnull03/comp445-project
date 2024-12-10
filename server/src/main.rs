@@ -24,6 +24,7 @@ pub struct AppState {
     cached_queries: Mutex<HashMap<Uuid, QueryState>>,
 }
 
+#[allow(dead_code)]
 pub struct QueryState {
     text_query: String,
     data: Vec<RecordResponse>,

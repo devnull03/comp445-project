@@ -7,7 +7,6 @@ use axum::{
 use rusqlite::params;
 use serde_json::json;
 use std::{
-    any::Any,
     collections::{HashMap, HashSet},
     sync::Arc,
 };
@@ -20,7 +19,7 @@ use crate::{
     AppState, QueryState,
 };
 
-const QUERY_LIMIT: u32 = 10;
+const QUERY_LIMIT: u32 = 20;
 
 pub async fn search_handler(
     query: Query<SearchReq>,
