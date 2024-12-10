@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   const API_URL = " ";
   let modalVisible = false;
+  let query = '';
   let search = "";
   let results = [];
   let currentResults = [];
@@ -72,14 +73,20 @@
   }
 
   async function formSubmitted(event) {
-    event.preventDefault();
-    const url = `${API_URL}${search}`;
-    response = await fetchResults(url);
-    const json = await response.json();
-    results = json.data.map((news) => news.url);
+    try {
+      const response = await fetch(`/search?query=<search_text>`);
+      results = await response.json();
+    } catch (err) {
+      error = err.message;
+    }
     currentResults = results;
     showResultsInfo = true;
     totalPages = Math.ceil(results.length / resultsPerPage);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    formSubmitted();
   }
 
   function applyFilters() {
@@ -142,9 +149,9 @@
   <header>
     <h1>News SearchWeb</h1>
   </header>
-  <form id="search-box">
+  <form id="search-box" on:submit={handleSubmit} >
     <input
-      bind:value={search}
+      bind:value={query}
       id="search-txt"
       class="search-txt"
       type="text"
