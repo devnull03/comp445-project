@@ -20,6 +20,7 @@ use crate::{
 };
 
 const QUERY_LIMIT: u32 = 20;
+const SIMILARITY_DOC_LIMIT: u32 = 5;
 
 pub async fn search_handler(
     query: Query<SearchReq>,
@@ -132,7 +133,7 @@ pub async fn search_handler(
                         });
                     }
                     count += 1;
-                    if count >= QUERY_LIMIT {
+                    if count >= SIMILARITY_DOC_LIMIT {
                         break;
                     }
                 }
@@ -184,7 +185,7 @@ pub async fn search_handler(
         query.search_text.clone().unwrap()
     );
 
-    let end = 10.max(search_entries.len());
+    let end = search_entries.len().min(QUERY_LIMIT as usize);
 
     Ok(Json(SearchResultsRes {
         search_id: new_search_id,
