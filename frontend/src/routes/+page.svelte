@@ -8,20 +8,40 @@
 	import { toast } from 'svelte-sonner';
 	import * as Table from '$lib/components/ui/table';
 	import * as Pagination from '$lib/components/ui/pagination';
+	import type { SearchResultsRes } from '$lib/model';
+	import { getPage } from '$lib/api';
 
 	let inputFocus: boolean = $state(false);
 	let buttonHover: boolean = $state(false);
 	let loadDelay: boolean = $state(true);
 
-	let query = $state('');
+	let query: string = $state('');
+	let searchResults: SearchResultsRes | undefined = $state();
+
+	const handlePagination = async (page: number) => {
+		loadDelay = true;
+		let result = await getPage(searchResults?.search_id as string, page);
+
+		if (result.error) {
+			toast.error(result.message || '');
+		} else {
+			searchResults = result;
+		}
+        loadDelay = false;
+	};
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	onMount(() => {
-        console.log(form);
-     
+		console.log(form);
+
 		if (form?.error) {
 			toast.error(form?.message || '');
 		}
+
+		query = (form?.queryText as string) || '';
+
+		searchResults = form?.result;
+
 		setTimeout(() => {
 			loadDelay = false;
 		}, 100);
@@ -69,7 +89,7 @@
 		</form>
 	</section>
 
-	{#if !loadDelay && form?.result}
+	{#if !loadDelay && searchResults}
 		<section transition:slide class="h-auto flex flex-col overflow-auto max-h-[90vh] mt-16 px-16">
 			<Table.Root class="w-[99%] mb-16">
 				<Table.Caption>Search Results for "{form?.queryText}"</Table.Caption>
@@ -82,7 +102,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each form.result.data as item, idx (idx)}
+					{#each searchResults.data as item, idx (idx)}
 						<Table.Row class="cursor-pointer">
 							<Table.Cell class="font-medium">{item.data.id}</Table.Cell>
 							<Table.Cell>{item.data.title}</Table.Cell>
@@ -96,7 +116,14 @@
 				</Table.Body>
 			</Table.Root>
 
-			<Pagination.Root count={form?.result.number_of_results} perPage={20} let:pages let:currentPage class="my-4">
+			<Pagination.Root
+				count={searchResults.number_of_results}
+				perPage={20}
+				let:pages
+				let:currentPage
+				class="my-4"
+				onPageChange={handlePagination}
+			>
 				<Pagination.Content>
 					<Pagination.Item>
 						<Pagination.PrevButton />

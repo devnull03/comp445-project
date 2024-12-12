@@ -1,5 +1,5 @@
 import type { Actions } from './$types';
-import { API_PATH } from '$env/static/private';
+import { PUBLIC_API_PATH } from '$env/static/public';
 import { fail } from '@sveltejs/kit';
 import type { SearchResultsRes } from '$lib/model';
 
@@ -9,7 +9,7 @@ export const actions = {
 		const query = formData.get('query');
 
 		try {
-			const response = await fetch(`${API_PATH}/search?search_text=${query}`, {
+			const response = await fetch(`${PUBLIC_API_PATH}/search?search_text=${query}`, {
 				method: 'GET',
 			});
 
