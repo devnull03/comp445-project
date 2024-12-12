@@ -1,15 +1,12 @@
 import type { Actions } from './$types';
 import { API_PATH } from '$env/static/private';
 import { fail } from '@sveltejs/kit';
+import type { SearchResultsRes } from '$lib/model';
 
 export const actions = {
 	default: async ({ request }) => {
 		const formData = await request.formData();
 		const query = formData.get('query');
-
-		if (query === "") {
-			return fail(400, { query, missing: true })
-		}
 
 		try {
 			const response = await fetch(`${API_PATH}/search?search_text=${query}`, {
@@ -23,7 +20,8 @@ export const actions = {
 
 			return {
 				success: true,
-				result
+				queryText: query,
+				result: result as SearchResultsRes
 			};
 		} catch (error: any) {
 			return fail(500, { query, error: 'Fetch failed: ' + error.message });
