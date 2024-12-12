@@ -24,7 +24,7 @@ const QUERY_LIMIT: u32 = 20;
 pub async fn search_handler(
     query: Query<SearchReq>,
     State(data): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let search_words = query.search_text.to_owned().unwrap_or("".to_string());
 
     let search_words = search_words
@@ -62,6 +62,13 @@ pub async fn search_handler(
                 for r in rows {
                     inv_idx_result_set.insert(r);
                 }
+            }
+
+            if inv_idx_result_set.len() == 0 {
+                return Err(tokio_rusqlite::Error::Other(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "404",
+                ))));
             }
 
             let mut stmt_records = conn.prepare("SELECT * FROM records WHERE id = (?1)")?;
@@ -137,8 +144,31 @@ pub async fn search_handler(
 
             Ok(extended_records_result_set)
         })
-        .await
-        .unwrap();
+        .await;
+
+    let search_entries = match search_entries {
+        Ok(entries) => entries,
+        Err(e) => {
+            let error_message = if let tokio_rusqlite::Error::Other(err) = &e {
+                if let Some(io_err) = err.downcast_ref::<std::io::Error>() {
+                    if io_err.kind() == std::io::ErrorKind::NotFound {
+                        "No matching records found"
+                    } else {
+                        "Failed to retrieve search entries"
+                    }
+                } else {
+                    "Failed to retrieve search entries"
+                }
+            } else {
+                "Failed to retrieve search entries"
+            };
+
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"message": error_message})),
+            ));
+        }
+    };
 
     let new_search_id = Uuid::new_v4();
     data.cached_queries.lock().unwrap().insert(
@@ -154,13 +184,15 @@ pub async fn search_handler(
         query.search_text.clone().unwrap()
     );
 
-    Json(SearchResultsRes {
+    let end = 10.max(search_entries.len());
+
+    Ok(Json(SearchResultsRes {
         search_id: new_search_id,
-        data: search_entries.get(0..10).unwrap().to_vec(),
+        data: search_entries.get(0..end).unwrap().to_vec(),
         number_of_results: search_entries.len() as u32,
         page: 1,
         total_pages: search_entries.len().div_ceil(QUERY_LIMIT as usize) as u32,
-    })
+    }))
 }
 
 pub async fn search_pagination_handler(
