@@ -1,21 +1,28 @@
 <script>
   import SimilarDocumentModal from "./similardoc.svelte";
   import { onMount } from "svelte";
+
   const API_URL = " ";
+
   let modalVisible = false;
-  let query = '';
-  let search = "";
-  let results = [];
-  let currentResults = [];
-  let currentPage = 1;
-  let resultsPerPage = 5;
+
+  let query = "";
+
+  let results;
+  let currentResults = {};
   let filteredResults = [];
-  let totalPages = 1;
+
   let showResultsInfo = false;
-  let fakeChecked = false;
-  let realChecked = false;
   let totalResults = 0;
   let selectedResult = {};
+
+  let currentPage = 1;
+  let resultsPerPage = 5;
+  let totalPages = 1;
+
+  let fakeChecked = false;
+  let realChecked = false;
+
   let similarModalVisible = false;
   let selectedSimilarDocument = {};
 
@@ -74,7 +81,7 @@
 
   async function formSubmitted(event) {
     try {
-      const response = await fetch(`/search?query=<search_text>`);
+      const response = await fetch(`${API_URL}/search?search_text=${query}`);
       results = await response.json();
     } catch (err) {
       error = err.message;
@@ -104,6 +111,10 @@
   }
 
   $: currentResults = filteredResults;
+
+  const displayPage = () => {
+
+  }
 
   function prevPage() {
     if (currentPage > 1) {
@@ -149,7 +160,7 @@
   <header>
     <h1>News SearchWeb</h1>
   </header>
-  <form id="search-box" on:submit={handleSubmit} >
+  <form id="search-box" on:submit={handleSubmit}>
     <input
       bind:value={query}
       id="search-txt"
@@ -216,22 +227,22 @@
         </div>
       {/if}
       <div id="results-container">
-        {#each currentResults as result}
+        {#each currentResults.data as result}
           <div
             class="result-item"
             role="button"
             tabindex="0"
-            aria-label={`Details about ${result.title}`}
+            aria-label={`Details about ${result.data.title}`}
             on:click={() => showModal(result)}
             on:keydown={(event) => {
               if (event.key === "Enter") {
                 showModal(result);
               }
             }}
-            data-id={result.id}
+            data-id={result.data.id}
           >
-            <strong>{result.fakeOrNot ? "Fake" : "Real"}</strong><br />
-            <strong>{result.title}</strong><br />
+            <strong>{result.data.label ? "Fake" : "Real"}</strong><br />
+            <strong>{result.data.title}</strong><br />
           </div>
         {/each}
       </div>
