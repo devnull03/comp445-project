@@ -94,13 +94,14 @@
 
 					<div>
 						<Table.Root class="w-[99%] mb-16">
-							<Table.Caption>??</Table.Caption>
+							<!-- <Table.Caption>??</Table.Caption> -->
 							<Table.Header>
 								<Table.Row>
 									<Table.Head class="w-[100px]">Document ID</Table.Head>
 									<Table.Head class="w-[35%]">Title</Table.Head>
 									<Table.Head>Content</Table.Head>
 									<Table.Head class="text-right">Real</Table.Head>
+									<Table.Head class="text-right">Similarity</Table.Head>
 								</Table.Row>
 							</Table.Header>
 							<Table.Body>
@@ -118,6 +119,7 @@
 											<i class="font-light">click to read more</i>
 										</Table.Cell>
 										<Table.Cell class="text-right">{item.doc.label}</Table.Cell>
+										<Table.Cell class="text-right">{item.similarity}</Table.Cell>
 									</Table.Row>
 								{/each}
 							</Table.Body>
