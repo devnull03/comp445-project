@@ -28,6 +28,23 @@ pub async fn search_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let search_words = query.search_text.to_owned().unwrap_or("".to_string());
 
+    for (key, value) in data.cached_queries.lock().unwrap().iter() {
+        if value.text_query == search_words {
+            tracing::info!(
+                "Returned Cashed Query: {}, with id: {}",
+                value.text_query,
+                key
+            );
+            return Ok(Json(SearchResultsRes {
+                search_id: *key,
+                data: value.data.clone(),
+                number_of_results: value.data.len() as u32,
+                page: 1,
+                total_pages: value.data.len().div_ceil(QUERY_LIMIT as usize) as u32,
+            }));
+        }
+    }
+
     let search_words = search_words
         .split_whitespace()
         .map(|v| v.to_string())
@@ -181,8 +198,8 @@ pub async fn search_handler(
     );
     tracing::info!(
         "Cashed Query: {}, with id: {}",
+        query.search_text.clone().unwrap(),
         &new_search_id,
-        query.search_text.clone().unwrap()
     );
 
     let end = search_entries.len().min(QUERY_LIMIT as usize);
