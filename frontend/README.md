@@ -1,38 +1,78 @@
-# sv
+# Search Engine Project
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+## Project Description
+This project is a web application designed to perform searches and display results with similarity information. It allows users to search for documents, view detailed information about each document, and see similar documents.
 
-## Creating a project
+## Setup Instructions
 
-If you're seeing this, you've probably already done this step. Congrats!
+### Prerequisites
+- Node.js (version 14.x or higher)
+- npm (version 6.x or higher)
 
-```bash
-# create a new project in the current directory
-npx sv create
+### Installation
+1. Clone the repository:
+    ```sh
+    git clone git@github.com:devnull03/comp445-project.git
+    ```
+2. Navigate to the project directory:
+    ```sh
+    cd comp445-project/frontend
+    ```
+3. Install dependencies:
+    ```sh
+    npm install
+    ```
 
-# create a new project in my-app
-npx sv create my-app
-```
+### Running the Application
+1. Start the development server:
+    ```sh
+    npm start
+    ```
+2. Open your browser and navigate to `http://localhost:3000`.
 
-## Developing
+## Routes
+### `/`
+- **Description**: Home page of the application where users can perform searches.
+- **Method**: GET
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### `/record/[id]`
+- **Description**: Page to view detailed information about a specific document.
+- **Method**: GET
 
-```bash
-npm run dev
+### `/api/search`
+- **Description**: API endpoint to perform a search query.
+- **Method**: POST
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### `/api/search-results`
+- **Description**: API endpoint to get search results for a specific query.
+- **Method**: GET
 
-## Building
+## Models
+### SearchResultsRes
+- **Description**: Represents the response of a search query.
+- **Fields**:
+  - `search_id`: string
+  - `data`: RecordResponse[]
+  - `number_of_results`: number
+  - `page`: number
+  - `total_pages`: number
 
-To create a production version of your app:
+### RecordResponse
+- **Description**: Represents a single record and its similar documents.
+- **Fields**:
+  - `data`: Record
+  - `similar_docs`: SimilarityInfoFull[]
 
-```bash
-npm run build
-```
+### SimilarityInfoFull
+- **Description**: Represents a similar document with similarity information.
+- **Fields**:
+  - `doc`: Record
+  - `similarity`: number
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+### Record
+- **Description**: Represents a document in the application.
+- **Fields**:
+  - `id`: number
+  - `title`: string
+  - `text`: string
+  - `label`: 1 | 0
