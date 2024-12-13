@@ -9,25 +9,27 @@
 	import * as Table from '$lib/components/ui/table';
 	import * as Pagination from '$lib/components/ui/pagination';
 	import type { SearchResultsRes } from '$lib/model';
+	import { currentQuery, currentSearchResults } from '$lib/stores.svelte';
 	import { getPage } from '$lib/api';
+	import { goto } from '$app/navigation';
 
 	let inputFocus: boolean = $state(false);
 	let buttonHover: boolean = $state(false);
 	let loadDelay: boolean = $state(true);
 
 	let query: string = $state('');
-	let searchResults: SearchResultsRes | undefined = $state();
+	// let $currentSearchResults: SearchResultsRes | undefined = $state();
 
 	const handlePagination = async (page: number) => {
 		loadDelay = true;
-		let result = await getPage(searchResults?.search_id as string, page);
+		let result = await getPage($currentSearchResults?.search_id as string, page);
 
 		if (result.error) {
 			toast.error(result.message || '');
 		} else {
-			searchResults = result;
+			$currentSearchResults = result;
 		}
-        loadDelay = false;
+		loadDelay = false;
 	};
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -38,13 +40,15 @@
 			toast.error(form?.message || '');
 		}
 
-		query = (form?.queryText as string) || '';
+		if (form?.queryText) $currentQuery = form?.queryText as string;
 
-		searchResults = form?.result;
+		query = $currentQuery;
+
+		if (form?.result) $currentSearchResults = form?.result;
 
 		setTimeout(() => {
 			loadDelay = false;
-		}, 100);
+		}, 50);
 	});
 </script>
 
@@ -64,9 +68,9 @@
 			<Input
 				type="text"
 				placeholder="what do you wanna search?"
-				class="rounded-lg {inputFocus
+				class="rounded-lg outline-none transition-all ease-in-out duration-300 {inputFocus
 					? 'w-[70vw]'
-					: 'w-[45vw]'} transition-all ease-in-out duration-300"
+					: 'w-[45vw]'}"
 				onfocus={() => {
 					inputFocus = true;
 				}}
@@ -75,7 +79,6 @@
 				}}
 				name="query"
 				bind:value={query}
-				defaultValue={form?.queryText}
 			/>
 			<Button
 				onmouseover={() => {
@@ -89,10 +92,10 @@
 		</form>
 	</section>
 
-	{#if !loadDelay && searchResults}
+	{#if !loadDelay && $currentSearchResults}
 		<section transition:slide class="h-auto flex flex-col overflow-auto max-h-[90vh] mt-16 px-16">
 			<Table.Root class="w-[99%] mb-16">
-				<Table.Caption>Search Results for "{form?.queryText}"</Table.Caption>
+				<Table.Caption>Search Results for "{$currentQuery}"</Table.Caption>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head class="w-[100px]">Document ID</Table.Head>
@@ -102,8 +105,13 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each searchResults.data as item, idx (idx)}
-						<Table.Row class="cursor-pointer">
+					{#each $currentSearchResults.data as item (item.data.id)}
+						<Table.Row
+							class="cursor-pointer"
+							onclick={() => {
+								goto(`/record/${item.data.id}`);
+							}}
+						>
 							<Table.Cell class="font-medium">{item.data.id}</Table.Cell>
 							<Table.Cell>{item.data.title}</Table.Cell>
 							<Table.Cell
@@ -117,7 +125,7 @@
 			</Table.Root>
 
 			<Pagination.Root
-				count={searchResults.number_of_results}
+				count={$currentSearchResults.number_of_results}
 				perPage={20}
 				let:pages
 				let:currentPage

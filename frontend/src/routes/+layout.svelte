@@ -2,7 +2,7 @@
 	import { Toaster } from 'svelte-sonner';
 	import { ModeWatcher } from 'mode-watcher';
 	import '../app.css';
-	import DarkModeSwitcher from '$lib/components/ui/DarkModeSwitcher.svelte';
+	import DarkModeSwitcher from '$lib/components/DarkModeSwitcher.svelte';
 
 	let { children } = $props();
 </script>
