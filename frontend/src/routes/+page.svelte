@@ -18,7 +18,6 @@
 	let loadDelay: boolean = $state(true);
 
 	let query: string = $state('');
-	// let $currentSearchResults: SearchResultsRes | undefined = $state();
 
 	const handlePagination = async (page: number) => {
 		loadDelay = true;
@@ -53,7 +52,7 @@
 </script>
 
 <main class="flex flex-col items-center justify-center h-screen">
-	<section class="flex flex-col gap-8 sticky top-12">
+	<section class="flex flex-col gap-8 sticky top-12 items-center">
 		<h1 class="text-3xl font-light self-center">Search Engine</h1>
 		<form
 			method="POST"
@@ -90,6 +89,15 @@
 				type="submit">Search</Button
 			>
 		</form>
+		{#if !$currentSearchResults}
+			<p class="text-sm text-gray-500 italic w-[50vw] text-center">
+				We have a comprehensive database sourced from Kaggle, containing over 8,000 articles from
+				various news outlets. Each article is meticulously labeled to indicate whether it is a
+				genuine piece or contains false information. This allows users to search and identify the
+				authenticity of news articles effectively.
+			</p>
+		{/if}
+		<div></div>
 	</section>
 
 	{#if !loadDelay && $currentSearchResults}
